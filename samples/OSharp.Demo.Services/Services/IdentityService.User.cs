@@ -81,14 +81,7 @@ namespace OSharp.Demo.Services
             },
            (dto, entity) =>
            {
-               var user = UserRepository.GetByKey(entity.Id);
-
-               if (user == null)
-               {
-                   throw new Exception("要更新的用户{0}不存在.".FormatWith(entity.Name));
-               }
-
-               user.Extend.RegistedIp = dto.RegistedIp;
+               entity.Extend.RegistedIp = dto.RegistedIp;
 
                return user;
            });
