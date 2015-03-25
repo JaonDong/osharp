@@ -83,7 +83,7 @@ namespace OSharp.Demo.Services
            {
                entity.Extend.RegistedIp = dto.RegistedIp;
 
-               return user;
+               return entity;
            });
         }
 
