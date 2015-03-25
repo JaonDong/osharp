@@ -13,6 +13,8 @@ using System.Linq.Expressions;
 using OSharp.Demo.Dtos.Identity;
 using OSharp.Demo.Models.Identity;
 using OSharp.Utility.Data;
+using OSharp.Utility;
+using OSharp.Utility.Extensions;
 
 
 namespace OSharp.Demo.Services
@@ -47,7 +49,28 @@ namespace OSharp.Demo.Services
         /// <returns>业务操作结果</returns>
         public OperationResult AddUsers(params UserDto[] dtos)
         {
-            throw new NotImplementedException();
+            return UserRepository.Insert(dtos,
+                (dto) =>
+                {
+                    if (UserRepository.CheckExists(u => u.Name == dto.Name))
+                    {
+                        throw new Exception("名字为“{0}”的用户已存在，不能重复添加。".FormatWith(dto.Name));
+                    }
+                },
+                (dto, entity) =>
+                {
+                    UserExtendRepository.Insert(new UserExtend() { RegistedIp = dto.RegistedIp, User = entity });
+                    var userExtends = UserExtendRepository.Entities.Where(extend => extend.User.Name == entity.Name);
+
+                    if (userExtends.Count() != 1)
+                    {
+                        throw new Exception("用户{0}的扩展信息获取异常.".FormatWith(entity.Name));
+                    }
+
+                    entity.Extend = userExtends.First();
+
+                    return entity;
+                });
         }
 
         /// <summary>
@@ -57,7 +80,26 @@ namespace OSharp.Demo.Services
         /// <returns>业务操作结果</returns>
         public OperationResult EditUsers(params UserDto[] dtos)
         {
-            throw new NotImplementedException();
+            return UserRepository.Update(dtos, dto =>
+            {
+                if (!UserRepository.CheckExists(u => u.Name == dto.Name))
+                {
+                    throw new Exception("名字为“{0}”的用户不存在，无法进行更新。".FormatWith(dto.Name));
+                }
+            },
+           (dto, entity) =>
+           {
+               var user = UserRepository.GetByKey(entity.Id);
+
+               if (user == null)
+               {
+                   throw new Exception("要更新的用户{0}不存在.".FormatWith(entity.Name));
+               }
+
+               user.Extend.RegistedIp = dto.RegistedIp;
+
+               return entity;
+           });
         }
 
         /// <summary>
@@ -67,7 +109,23 @@ namespace OSharp.Demo.Services
         /// <returns>业务操作结果</returns>
         public OperationResult DeleteUsers(params int[] ids)
         {
-            throw new NotImplementedException();
+            ids.CheckNotNull("ids");
+
+            return UserRepository.Delete(ids,
+                entity =>
+                {
+                    var user = UserRepository.GetByKey(entity.Id);
+                    if (user == null)
+                    {
+                        throw new Exception("用户{0}不存在。".FormatWith(entity.Name));
+                    }
+                },
+                entity =>
+                {
+                    UserExtendRepository.Delete(entity.Extend.Id);
+
+                    return entity;
+                });
         }
 
         /// <summary>
@@ -78,7 +136,31 @@ namespace OSharp.Demo.Services
         /// <returns>业务操作结果</returns>
         public OperationResult SetUserRoles(int id, int[] roleIds)
         {
-            throw new NotImplementedException();
+            roleIds.CheckNotNull("roleIds");
+
+            var userDtos = new System.Collections.Generic.List<UserDto>() { new UserDto { Id = id } };
+
+            return UserRepository.Update(userDtos,
+                dto =>
+                {
+                    var user = UserRepository.GetByKey(id);
+
+                    if (user == null)
+                    {
+                        throw new Exception("用户id:{0}不存在.".FormatWith(id));
+                    }
+                },
+                (dto, entity) =>
+                {
+                    foreach (var roleId in roleIds)
+                    {
+                        var role = RoleRepository.GetByKey(roleId);
+                        //if(role==null)  是不是过度了？
+                        entity.Roles.Add(role);
+                    }
+
+                    return entity;
+                });
         }
 
         #endregion
