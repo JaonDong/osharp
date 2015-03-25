@@ -59,15 +59,7 @@ namespace OSharp.Demo.Services
                 },
                 (dto, entity) =>
                 {
-                    UserExtendRepository.Insert(new UserExtend() { RegistedIp = dto.RegistedIp, User = entity });
-                    var userExtends = UserExtendRepository.Entities.Where(extend => extend.User.Name == entity.Name);
-
-                    if (userExtends.Count() != 1)
-                    {
-                        throw new Exception("用户{0}的扩展信息获取异常.".FormatWith(entity.Name));
-                    }
-
-                    entity.Extend = userExtends.First();
+                    entity.Extend = new UserExtend() { RegistedIp = dto.RegistedIp, User = entity };
 
                     return entity;
                 });
@@ -98,7 +90,7 @@ namespace OSharp.Demo.Services
 
                user.Extend.RegistedIp = dto.RegistedIp;
 
-               return entity;
+               return user;
            });
         }
 
@@ -152,14 +144,16 @@ namespace OSharp.Demo.Services
                 },
                 (dto, entity) =>
                 {
+                    var user = UserRepository.GetByKey(id);
+                    user.Roles.Clear();
+
                     foreach (var roleId in roleIds)
                     {
                         var role = RoleRepository.GetByKey(roleId);
-                        //if(role==null)  是不是过度了？
-                        entity.Roles.Add(role);
+                        user.Roles.Add(role);
                     }
 
-                    return entity;
+                    return user;
                 });
         }
 
